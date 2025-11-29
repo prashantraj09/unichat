@@ -1,50 +1,110 @@
-import { useState, useRef, useEffect } from "react";
+// client/src/components/ChatWindow.jsx
+import { useEffect, useRef, useState } from "react";
 
-function ChatWindow({ messages, loading, currentUserId, onSendMessage }) {
+function ChatWindow({
+  auth,
+  selectedConversation,
+  messages,
+  loading,
+  onSendMessage,
+}) {
   const [text, setText] = useState("");
-  const bottomRef = useRef(null);
+  const messagesEndRef = useRef(null);
 
+  // Auto scroll to bottom when messages change
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    messagesEndRef.current?.scrollIntoView({
+      behavior: "smooth",
+    });
   }, [messages]);
 
-  function handleSubmit(e) {
+  const handleSubmit = (e) => {
     e.preventDefault();
     if (!text.trim()) return;
     onSendMessage(text.trim());
     setText("");
+  };
+
+  if (!selectedConversation) {
+    return (
+      <div className="chat-empty-state">
+        Select a user from the list to start chatting securely with
+        UNICHAT.
+      </div>
+    );
   }
 
+  const other =
+    selectedConversation.participants?.find(
+      (p) => p._id !== auth.user.id
+    ) || null;
+
   return (
-    <div className="chat-window">
-      <div className="messages">
-        {loading && <p>Loading messages...</p>}
-        {messages.map((m) => (
-          <div
-            key={m._id || m.timestamp}
-            className={
-              "message-bubble " +
-              (m.senderId === currentUserId ? "me" : "them")
-            }
-          >
-            <div className="message-text">{m.plaintext || "[Decryption failed]"}</div>
-            <div className="message-meta">
-              {m.timestamp ? new Date(m.timestamp).toLocaleTimeString() : ""}
-            </div>
+    <>
+      {/* Inner chat header (hidden on small screens via CSS) */}
+      <div className="chat-header">
+        <div>
+          <div className="chat-header-title">
+            {other?.email || "Chat"}
           </div>
-        ))}
-        <div ref={bottomRef} />
+          <div className="chat-header-sub">
+            Messages are end-to-end encrypted.
+          </div>
+        </div>
       </div>
 
-      <form className="message-input" onSubmit={handleSubmit}>
+      <div className="chat-messages">
+        {loading && (
+          <div
+            style={{
+              fontSize: "0.75rem",
+              color: "#9ca3af",
+              marginBottom: "0.5rem",
+            }}
+          >
+            Loading messages...
+          </div>
+        )}
+
+        {messages.map((m) => {
+          const isMe = m.senderId === auth.user.id;
+          return (
+            <div
+              key={m._id || `${m.timestamp}-${m.counter}`}
+              className={`message-row ${
+                isMe ? "me" : "them"
+              }`}
+            >
+              <div className="message-bubble">
+                <div>{m.plaintext}</div>
+                <div className="message-meta">
+                  {new Date(m.timestamp).toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+        <div ref={messagesEndRef} />
+      </div>
+
+      <form
+        className="chat-input-bar"
+        onSubmit={handleSubmit}
+      >
         <input
-          placeholder="Type a message..."
+          className="chat-input"
+          placeholder="Type a secure message…"
           value={text}
           onChange={(e) => setText(e.target.value)}
         />
-        <button type="submit">Send</button>
+        <button className="chat-send-btn" type="submit">
+          Send
+        </button>
       </form>
-    </div>
+    </>
   );
 }
 
