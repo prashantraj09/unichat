@@ -1,110 +1,50 @@
-// client/src/components/ChatWindow.jsx
-import { useEffect, useRef, useState } from "react";
+import { useState, useRef, useEffect } from "react";
 
-function ChatWindow({
-  auth,
-  selectedConversation,
-  messages,
-  loading,
-  onSendMessage,
-}) {
+function ChatWindow({ messages, loading, currentUserId, onSendMessage }) {
   const [text, setText] = useState("");
-  const messagesEndRef = useRef(null);
+  const bottomRef = useRef(null);
 
-  // Auto scroll to bottom when messages change
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({
-      behavior: "smooth",
-    });
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const handleSubmit = (e) => {
+  function handleSubmit(e) {
     e.preventDefault();
     if (!text.trim()) return;
     onSendMessage(text.trim());
     setText("");
-  };
-
-  if (!selectedConversation) {
-    return (
-      <div className="chat-empty-state">
-        Select a user from the list to start chatting securely with
-        UNICHAT.
-      </div>
-    );
   }
 
-  const other =
-    selectedConversation.participants?.find(
-      (p) => p._id !== auth.user.id
-    ) || null;
-
   return (
-    <>
-      {/* Inner chat header (hidden on small screens via CSS) */}
-      <div className="chat-header">
-        <div>
-          <div className="chat-header-title">
-            {other?.email || "Chat"}
-          </div>
-          <div className="chat-header-sub">
-            Messages are end-to-end encrypted.
-          </div>
-        </div>
-      </div>
-
-      <div className="chat-messages">
-        {loading && (
+    <div className="chat-window">
+      <div className="messages">
+        {loading && <p>Loading messages...</p>}
+        {messages.map((m) => (
           <div
-            style={{
-              fontSize: "0.75rem",
-              color: "#9ca3af",
-              marginBottom: "0.5rem",
-            }}
+            key={m._id || m.timestamp}
+            className={
+              "message-bubble " +
+              (m.senderId === currentUserId ? "me" : "them")
+            }
           >
-            Loading messages...
-          </div>
-        )}
-
-        {messages.map((m) => {
-          const isMe = m.senderId === auth.user.id;
-          return (
-            <div
-              key={m._id || `${m.timestamp}-${m.counter}`}
-              className={`message-row ${
-                isMe ? "me" : "them"
-              }`}
-            >
-              <div className="message-bubble">
-                <div>{m.plaintext}</div>
-                <div className="message-meta">
-                  {new Date(m.timestamp).toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </div>
-              </div>
+            <div className="message-text">{m.plaintext || "[Decryption failed]"}</div>
+            <div className="message-meta">
+              {m.timestamp ? new Date(m.timestamp).toLocaleTimeString() : ""}
             </div>
-          );
-        })}
-        <div ref={messagesEndRef} />
+          </div>
+        ))}
+        <div ref={bottomRef} />
       </div>
 
-      <form
-        className="chat-input-bar"
-        onSubmit={handleSubmit}
-      >
+      <form className="message-input" onSubmit={handleSubmit}>
         <input
-          className="chat-input"
-          placeholder="Type a secure message…"
+          placeholder="Type a message..."
           value={text}
           onChange={(e) => setText(e.target.value)}
         />
-        <button className="chat-send-btn" type="submit">
-          Send
-        </button>
+        <button type="submit">Send</button>
       </form>
-    </>
+    </div>
   );
 }
 
